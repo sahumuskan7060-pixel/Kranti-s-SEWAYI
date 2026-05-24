@@ -9,10 +9,28 @@ dotenv.config();
 
 const app = express();
 
+// CORS Configuration
+const corsOptions = {
+  origin: process.env.CORS_ORIGIN?.split(',') || [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:8888'
+  ],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+  next();
+});
 
 // MongoDB Connection
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/kranti-simaiyan')
@@ -36,7 +54,8 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'Server is running',
     timestamp: new Date().toISOString(),
-    business: 'Kranti Sahu\'s Homemade Simaiyan'
+    business: 'Kranti Sahu\'s Homemade Simaiyan',
+    environment: process.env.NODE_ENV
   });
 });
 
@@ -55,7 +74,7 @@ app.use((err, req, res, next) => {
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { error: err })
+    ...(process.env.NODE_ENV === 'development' && { error: err.stack })
   });
 });
 
@@ -63,7 +82,8 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`\n🚀 Kranti Simaiyan Backend Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV}`);
-  console.log(`🏪 Business: Kranti Sahu's Homemade Simaiyan\n`);
+  console.log(`🏪 Business: Kranti Sahu's Homemade Simaiyan`);
+  console.log(`🌐 CORS Origins: ${corsOptions.origin.join(', ')}\n`);
 });
 
 module.exports = app;
